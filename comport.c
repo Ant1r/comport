@@ -1565,16 +1565,24 @@ static void comport_parity(t_comport *x,t_floatarg fparity)
 static void comport_stopbit(t_comport *x, t_floatarg fstop)
 {
     t_float stop = set_stopflag(x, fstop);
+    const char*stopname =
+#ifdef _WIN32
+      "stopbits"
+#else
+      "extra stopbit"
+#endif
+      ;
+
 
     if(x->comhandle == INVALID_HANDLE_VALUE)return;
 
     if(set_serial(x) == 0)
     {
-        pd_error(x,"[comport] ** ERROR ** could not set extra stopbits of device %s\n",
-            x->pretty_name);
+        pd_error(x,"[comport] ** ERROR ** could not set %s of device %s\n",
+            stopname, x->pretty_name);
         return;
     }
-    else comport_verbose("[comport] set extra stopbits of %s to %g\n", x->pretty_name, stop);
+    else comport_verbose("[comport] set %s of %s to %g\n", stopname, x->pretty_name, stop);
     x->stop_bits = stop;
 }
 
