@@ -1364,7 +1364,7 @@ static void *comport_new(t_symbol *s, int argc, t_atom *argv)
     t_comport *x;
     HANDLE    fd;
     const char *serial_device_prefix;
-    t_float com_num = 0;
+    int com_num = 0;
     int ibaud = 9600;
     (void)s; /* squelch unused-parameter warning */
 
@@ -1389,7 +1389,7 @@ allows COM port numbers to be specified. */
 
     if(argc > 0) {
       if (argv->a_type == A_FLOAT)
-        com_num = atom_getfloatarg(0, argc, argv);
+        com_num = (int)atom_getfloatarg(0, argc, argv);
       else
         serial_device_prefix = atom_getsymbol(argv)->s_name;
     }
@@ -1414,7 +1414,13 @@ allows COM port numbers to be specified. */
     test.ctsrts = 0; /* default no hardware handshaking */
     test.xonxoff = 0; /* default no software handshaking */
     test.hupcl = 1; /* default hangup on close */
-    fd = open_serial((unsigned int)com_num, &test);
+
+    /* don't try to open negative devices */
+    if(com_num < 0) {
+      fd = INVALID_HANDLE_VALUE;
+    } else {
+      fd = open_serial((unsigned int)com_num, &test);
+    }
 
     /* Now  nothing really bad could happen so we create the class */
     x = (t_comport *)pd_new(comport_class);
@@ -1436,9 +1442,9 @@ allows COM port numbers to be specified. */
     x->hupcl = test.hupcl;
     x->comhandle = fd; /* holds the comport handle */
 
-    if(fd == INVALID_HANDLE_VALUE )
+    if(fd == INVALID_HANDLE_VALUE && com_num>=0)
     {
-        pd_error(x, "[comport] opening serial port %g failed!", com_num);
+        pd_error(x, "[comport] opening serial port %d failed!", com_num);
     }
     else
     {
