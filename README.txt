@@ -1,4 +1,4 @@
-comport - PD external for unix/windows to use the serial ports
+comport - Pd external for unix/windows to use the serial ports
 
  (c) 1998-2005  Winfried Ritsch (see LICENCE.txt)
  Institute for Electronic Music - Graz

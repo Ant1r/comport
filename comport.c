@@ -1998,7 +1998,7 @@ void comport_setup(void)
     null_tv.tv_sec = 0; /* no wait */
     null_tv.tv_usec = 0;
 #endif /* NOT _WIN32 */
-    logpost(0, PD_DEBUG, "comport - PD external for unix/windows\n"
+    logpost(0, PD_DEBUG, "comport - Pd external for unix/windows\n"
         "LGPL-2.1+ 1998-2022,  Winfried Ritsch and others (see LICENSE.txt)\n"
         "Institute for Electronic Music - Graz");
 }
