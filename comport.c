@@ -78,6 +78,7 @@ typedef struct comport
 
   /* device specifications */
     t_symbol        *serial_device;
+    const char*     pretty_name;
     char            serial_device_prefix[MAXPDSTRING];/* the device name without the number */
     short           comport; /* holds the comport # */
 
@@ -486,6 +487,7 @@ static int set_hupcl(t_comport *x, int nr)
 
 static HANDLE open_serial(unsigned int com_num, t_comport *x)
 {
+    const char* pretty_name = 0;
     HANDLE          fd;
     COMMTIMEOUTS    timeouts;
     char            buffer[MAX_PATH];
@@ -517,7 +519,10 @@ static HANDLE open_serial(unsigned int com_num, t_comport *x)
 #endif
         x->serial_device = gensym(buffer);
     }
-    comport_verbose("[comport] Opening %s", &x->serial_device->s_name[4]);/* skip slashes and dot */
+    if(x->serial_device && x->serial_device->s_name)
+        pretty_name = &x->serial_device->s_name[4];/* skip slashes and dot */
+
+    comport_verbose("[comport] Opening %s", pretty_name);
     fd = CreateFileA( x->serial_device->s_name,
         GENERIC_READ | GENERIC_WRITE,
         0,
@@ -551,7 +556,7 @@ static HANDLE open_serial(unsigned int com_num, t_comport *x)
                 break;
         }
         pd_error(x, "[comport]: could not open device %s:\n failure(%ld) %s\n",
-        &x->serial_device->s_name[4], dw, errStr);
+            pretty_name, dw, errStr);
         return INVALID_HANDLE_VALUE;
     }
 
@@ -559,8 +564,7 @@ static HANDLE open_serial(unsigned int com_num, t_comport *x)
 
     if (!GetCommState(fd, &(x->dcb_old)))
     {
-        pd_error(x, "[comport]: could not get old dcb of device %s\n",
-            &x->serial_device->s_name[4]);
+        pd_error(x, "[comport]: could not get old dcb of device %s\n", pretty_name);
         CloseHandle(fd);
         return INVALID_HANDLE_VALUE;
     }
@@ -569,8 +573,7 @@ static HANDLE open_serial(unsigned int com_num, t_comport *x)
 
     if (!GetCommState(fd, &(x->dcb)))
     {
-        pd_error(x, "[comport]: could not get new dcb of device %s\n",
-            &x->serial_device->s_name[4]);
+        pd_error(x, "[comport]: could not get new dcb of device %s\n", pretty_name);
 
         CloseHandle(fd);
         return INVALID_HANDLE_VALUE;
@@ -611,12 +614,11 @@ static HANDLE open_serial(unsigned int com_num, t_comport *x)
     if(set_serial(x))
     {
         comport_verbose("[comport] opened serial line device %d (%s)\n",
-            com_num, &x->serial_device->s_name[4]);
+            com_num, pretty_name);
     }
     else
     {
-        pd_error(x, "[comport] could not set params to control dcb of device %s\n",
-            &x->serial_device->s_name[4]);
+        pd_error(x, "[comport] could not set params to control dcb of device %s\n", pretty_name);
         CloseHandle(fd);
         return INVALID_HANDLE_VALUE;
     }
@@ -643,6 +645,7 @@ static HANDLE open_serial(unsigned int com_num, t_comport *x)
         pd_error(x, "[comport] Couldn't do SetupComm (%ld)", GetLastError());
     }
     x->comport = com_num;/* output on next tick */
+    x->pretty_name = pretty_name;
     return fd;
 }
 
@@ -653,14 +656,14 @@ static HANDLE close_serial(t_comport *x)
         if (!SetCommState(x->comhandle, &(x->dcb_old)))
         {
             pd_error(x, "[comport] ** ERROR ** couldn't reset params to DCB of device %s\n",
-            &x->serial_device->s_name[4]);
+                x->pretty_name);
         }
         if (!SetCommTimeouts(x->comhandle, &(x->old_timeouts)))
         {
             pd_error(x, "[comport] Couldn't reset old_timeouts for serial device");
         }
         CloseHandle(x->comhandle);
-        comport_verbose("[comport] closed %s", &x->serial_device->s_name[4]);
+        comport_verbose("[comport] closed %s", x->pretty_name);
     }
     return INVALID_HANDLE_VALUE;
 }
@@ -1021,6 +1024,8 @@ static int open_serial(unsigned int com_num, t_comport *x)
         return INVALID_HANDLE_VALUE;
     }
     x->comport = com_num; /* output at next comport_tick */
+    x->pretty_name = x->serial_device->s_name;
+
     return fd;
 }
 
@@ -1485,19 +1490,9 @@ static void comport_baud(t_comport *x,t_floatarg f)
 
     if(set_serial(x) == 0)
     {
-        pd_error(x,"[comport] ** ERROR ** could not set baudrate of device %s\n",
-#ifdef _WIN32
-            &x->serial_device->s_name[4]);
-#else
-            x->serial_device->s_name);
-#endif
+        pd_error(x,"[comport] ** ERROR ** could not set baudrate of device %s\n", x->pretty_name);
     }
-    else comport_verbose("[comport] set baudrate of %s to %d\n",
-#ifdef _WIN32
-            &x->serial_device->s_name[4], x->baud);
-#else
-            x->serial_device->s_name, x->baud);
-#endif
+    else comport_verbose("[comport] set baudrate of %s to %d\n", x->pretty_name, x->baud);
 }
 
 static void comport_bits(t_comport *x,t_floatarg fbits)
@@ -1508,20 +1503,10 @@ static void comport_bits(t_comport *x,t_floatarg fbits)
 
     if(set_serial(x) == 0)
     {
-        pd_error(x,"[comport] ** ERROR ** could not set bits of device %s\n",
-#ifdef _WIN32
-            &x->serial_device->s_name[4]);
-#else
-            x->serial_device->s_name);
-#endif
+        pd_error(x,"[comport] ** ERROR ** could not set bits of device %s\n", x->pretty_name);
         return;
     }
-    else comport_verbose("[comport] set bits of %s to %d\n",
-#ifdef _WIN32
-            &x->serial_device->s_name[4], bits);
-#else
-            x->serial_device->s_name, bits);
-#endif
+    else comport_verbose("[comport] set bits of %s to %d\n", x->pretty_name, bits);
     x->data_bits = bits;
 }
 
@@ -1534,20 +1519,10 @@ static void comport_parity(t_comport *x,t_floatarg fparity)
 
     if(set_serial(x) == 0)
     {
-        pd_error(x,"[comport] ** ERROR ** could not set extra paritybit of device %s\n",
-#ifdef _WIN32
-            &x->serial_device->s_name[4]);
-#else
-            x->serial_device->s_name);
-#endif
+        pd_error(x,"[comport] ** ERROR ** could not set extra paritybit of device %s\n", x->pretty_name);
         return;
     }
-    else comport_verbose("[comport] set extra paritybit of %s to %d\n",
-#ifdef _WIN32
-            &x->serial_device->s_name[4], parity);
-#else
-            x->serial_device->s_name, parity);
-#endif
+    else comport_verbose("[comport] set extra paritybit of %s to %d\n", x->pretty_name, parity);
     x->parity_bit = parity;
 }
 
@@ -1559,23 +1534,11 @@ static void comport_stopbit(t_comport *x, t_floatarg fstop)
 
     if(set_serial(x) == 0)
     {
-#ifdef _WIN32
-        pd_error(x,"[comport] ** ERROR ** could not set stopbits of device %s to %g\n",
-            &x->serial_device->s_name[4], stop);
-#else
-        pd_error(x,"[comport] ** ERROR ** could not set extra stopbit of device %s\n",
-            x->serial_device->s_name);
-#endif
+        pd_error(x,"[comport] ** ERROR ** could not set extra stopbits of device %s\n",
+            x->pretty_name);
         return;
     }
-    else comport_verbose
-#ifdef _WIN32
-        ("[comport] set stopbits of %s to %g\n",
-            &x->serial_device->s_name[4], stop);
-#else
-        ("[comport] set extra stopbit of %s to %g\n",
-            x->serial_device->s_name, stop);
-#endif
+    else comport_verbose("[comport] set extra stopbits of %s to %g\n", x->pretty_name, stop);
     x->stop_bits = stop;
 }
 
@@ -1587,20 +1550,10 @@ static void comport_rtscts(t_comport *x,t_floatarg f)
 
     if(set_serial(x) == 0)
     {
-        pd_error(x,"[comport] ** ERROR ** could not set rts_cts of device %s\n",
-#ifdef _WIN32
-            &x->serial_device->s_name[4]);
-#else
-            x->serial_device->s_name);
-#endif
+        pd_error(x,"[comport] ** ERROR ** could not set rts_cts of device %s\n", x->pretty_name);
         return;
     }
-    else comport_verbose("[comport] set rts-cts of %s to %g\n",
-#ifdef _WIN32
-            &x->serial_device->s_name[4], f);
-#else
-            x->serial_device->s_name, f);
-#endif
+    else comport_verbose("[comport] set rts-cts of %s to %g\n", x->pretty_name, f);
     x->ctsrts = f;
 }
 
@@ -1612,19 +1565,9 @@ static void comport_dtr(t_comport *x,t_floatarg f)
 
     if(f < 0)
     {
-        pd_error(x,"[comport] ** ERROR ** could not set dtr of device %s\n",
-#ifdef _WIN32
-            &x->serial_device->s_name[4]);
-#else
-            x->serial_device->s_name);
-#endif
+        pd_error(x,"[comport] ** ERROR ** could not set dtr of device %s\n", x->pretty_name);
     }
-    else comport_verbose("[comport] set dtr of %s to %g\n",
-#ifdef _WIN32
-            &x->serial_device->s_name[4], f);
-#else
-            x->serial_device->s_name, f);
-#endif
+    else comport_verbose("[comport] set dtr of %s to %g\n", x->pretty_name, f);
 }
 
 static void comport_rts(t_comport *x,t_floatarg f)
@@ -1635,19 +1578,9 @@ static void comport_rts(t_comport *x,t_floatarg f)
 
     if(f < 0)
     {
-        pd_error(x,"[comport] ** ERROR ** could not set rts of device %s\n",
-#ifdef _WIN32
-            &x->serial_device->s_name[4]);
-#else
-            x->serial_device->s_name);
-#endif
+        pd_error(x,"[comport] ** ERROR ** could not set rts of device %s\n", x->pretty_name);
     }
-    else comport_verbose("[comport] set rts of %s to %g\n",
-#ifdef _WIN32
-            &x->serial_device->s_name[4], f);
-#else
-            x->serial_device->s_name, f);
-#endif
+    else comport_verbose("[comport] set rts of %s to %g\n", x->pretty_name, f);
 }
 
 static void comport_break(t_comport *x,t_floatarg f)
@@ -1658,19 +1591,9 @@ static void comport_break(t_comport *x,t_floatarg f)
 
     if(f < 0)
     {
-        pd_error(x,"[comport] ** ERROR ** could not set break of device %s\n",
-#ifdef _WIN32
-            &x->serial_device->s_name[4]);
-#else
-            x->serial_device->s_name);
-#endif
+        pd_error(x,"[comport] ** ERROR ** could not set break of device %s\n", x->pretty_name);
     }
-    else comport_verbose("[comport] set break of %s to %g\n",
-#ifdef _WIN32
-            &x->serial_device->s_name[4], f);
-#else
-            x->serial_device->s_name, f);
-#endif
+    else comport_verbose("[comport] set break of %s to %g\n", x->pretty_name, f);
 }
 
 static void comport_xonxoff(t_comport *x,t_floatarg f)
@@ -1681,20 +1604,10 @@ static void comport_xonxoff(t_comport *x,t_floatarg f)
 
     if(set_serial(x) == 0)
     {
-        pd_error(x,"[comport] ** ERROR ** could not set xonxoff of device %s\n",
-#ifdef _WIN32
-            &x->serial_device->s_name[4]);
-#else
-            x->serial_device->s_name);
-#endif
+        pd_error(x,"[comport] ** ERROR ** could not set xonxoff of device %s\n", x->pretty_name);
         return;
     }
-    else comport_verbose("[comport] set xonxoff of %s to %g\n",
-#ifdef _WIN32
-        &x->serial_device->s_name[4], f);
-#else
-        x->serial_device->s_name, f);
-#endif
+    else comport_verbose("[comport] set xonxoff of %s to %g\n", x->pretty_name, f);
     x->xonxoff = f;
 }
 
@@ -2019,11 +1932,7 @@ static void comport_help(t_comport *x)
     post("[comport] serial port %d (baud %d):", x->comport, x->baud);
     if(x->comport >= 0 && x->comport < COMPORT_MAX)
     {
-#ifdef WIN32
-        post("\tdevicename: %s", &x->serial_device->s_name[4]);
-#else
-        post("\tdevicename: %s", x->serial_device->s_name);
-#endif
+        post("\tdevicename: %s", x->pretty_name);
     }
 
     post("  Methods:");
