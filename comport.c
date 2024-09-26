@@ -1401,7 +1401,8 @@ allows COM port numbers to be specified. */
 #ifdef _WIN32
     strncpy_s(test.serial_device_prefix, strlen(serial_device_prefix) + 1, serial_device_prefix, strlen(serial_device_prefix) + 1);
 #else
-    strncpy(test.serial_device_prefix, serial_device_prefix, MAXPDSTRING);
+    strncpy(test.serial_device_prefix, serial_device_prefix, MAXPDSTRING-1);
+    test.serial_device_prefix[MAXPDSTRING-1] = 0;
 #endif
     test.baud = ibaud;
     test.data_bits = 8; /* default 8 data bits */
