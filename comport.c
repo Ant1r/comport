@@ -1374,17 +1374,14 @@ specify a COM port number greater than 9, use the following syntax:
 "\\\\.\\COM10".  This syntax works for all port numbers and hardware that
 allows COM port numbers to be specified. */
     serial_device_prefix = "\\\\.\\COM";
-#endif /* _WIN32 */
 /* for UNIX, this is a glob pattern for matching devices  */
-#ifdef __APPLE__
+#elif defined __APPLE__
     serial_device_prefix = "/dev/tty.*";
-#endif /* __APPLE__ */
-#ifdef IRIX
-    serial_device_prefix = "/dev/ttyd*";
-#endif /* IRIX */
-#ifdef __linux__
+#elif defined __linux__
     /* serial: ttyS?    USB-serial: ttyUSB?   USB-CDC: ttyACM? */
     serial_device_prefix = "/dev/tty[ASU]*";
+#elif defined IRIX
+    serial_device_prefix = "/dev/ttyd*";
 #endif /* __linux__ */
 
     if(argc > 0) {
