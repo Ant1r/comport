@@ -171,57 +171,84 @@ static long baudspeedbittable[] =
 #define BAUDRATE_38400  B38400
 #endif /* else IRIX */
 
+typedef struct baudbits_ {
+  long rate;
+  long speedbits;
+} baudbits_t;
+
 static
-long baudspeedbittable[] =
-{
-    BAUDRATE_230400,
-    BAUDRATE_115200,  /* CPU SPECIFIC */
-    BAUDRATE_57600,   /* CPU SPECIFIC */
-    BAUDRATE_38400,   /* CPU SPECIFIC */
-    B19200,
-    B9600,
-    B4800,
-    B2400,
-    B1800,
-    B1200,
-    B600,
-    B300,
-    B200,
-    B150,
-    B134,
-    B110,
-    B75,
-    B50,
-    B0
+baudbits_t baudbitstable[] = {
+#ifdef B4000000
+  {4000000, B4000000},
+#endif
+#ifdef B3500000
+  {3500000, B3500000},
+#endif
+#ifdef B3000000
+  {3000000, B3000000},
+#endif
+#ifdef B2500000
+  {2500000, B2500000},
+#endif
+#ifdef B2000000
+  {2000000, B2000000},
+#endif
+#ifdef B1500000
+  {1500000, B1500000},
+#endif
+#ifdef B1152000
+  {1152000, B1152000},
+#endif
+#ifdef B1000000
+  {1000000, B1000000},
+#endif
+#ifdef B921600
+  {921600, B921600},
+#endif
+#ifdef B576000
+  {576000, B576000},
+#endif
+#ifdef B500000
+  {500000, B500000},
+#endif
+#ifdef B460800
+  {460800, B460800},
+#endif
+#ifdef B230400
+  {230400, B230400},
+#else
+  /* previously, this was supported without an #ifdef */
+# warning baudrate 230400 not supported (anymore)?
+#endif
+#ifdef B115200
+  {115200, B115200},
+#endif
+#ifdef B57600
+  {57600, B57600},
+#endif
+#ifdef B38400
+  {38400, B38400},
+#endif
+  {19200, B19200},
+  {9600, B9600},
+  {4800, B4800},
+  {2400, B2400},
+  {1800, B1800},
+  {1200, B1200},
+  {600, B600},
+  {300, B300},
+  {200, B200},
+  {150, B150},
+  {134, B134},
+  {110, B110},
+  {75, B75},
+  {50, B50},
+  {0, B0}
 };
 
+
+
 struct timeval null_tv;
-
-#define BAUDRATETABLE_LEN 19
-
-static long baudratetable[] =
-{
-    230400L,
-    115200L,
-    57600L,
-    38400L,
-    19200L,
-    9600L,
-    4800L,
-    2400L,
-    1800L,
-    1200L,
-    600L,
-    300L,
-    200L,
-    150L,
-    134L,
-    110L,
-    75L,
-    50L,
-    0L
-
-}; /* holds the baud rate selections */
 
 #endif /* else _WIN32 */
 
@@ -713,22 +740,24 @@ int comport_get_cts(t_comport *x)
 
 static long get_baud_ratebits(t_comport *x, long *baud)
 {
-    int i = 0;
+    unsigned int i = 0;
+    const unsigned int tablelen = sizeof(baudbitstable) / sizeof(*baudbitstable);
 
-    while(i < BAUDRATETABLE_LEN && baudratetable[i] > *baud) i++;
+    while(i < tablelen && baudbitstable[i].rate > *baud) i++;
 
-    if(baudratetable[i] != *baud)
-        pd_error(x, "[comport]: %ld not valid, using closest value: %ld", *baud, baudratetable[i]);
+    if(baudbitstable[i].rate != *baud)
+        pd_error(x, "[comport]: %ld not valid, using closest value: %ld", *baud, baudbitstable[i].rate);
 
     /* nearest Baudrate finding */
-    if(i==BAUDRATETABLE_LEN ||  baudspeedbittable[i] < 0)
+    if(i==tablelen ||  baudbitstable[i].rate < 0)
     {
         pd_error(x, "*Warning* The baud rate %ld is not supported or out of range, using 9600\n",*baud);
-        i = 8;
+	*baud = 9600;
+	return B9600;
     }
-    *baud =  baudratetable[i];
 
-    return baudspeedbittable[i];
+    *baud =  baudbitstable[i].rate;
+    return baudbitstable[i].speedbits;
 }
 
 static int set_baudrate(t_comport *x, int ibaud)
