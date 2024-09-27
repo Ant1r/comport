@@ -1374,7 +1374,7 @@ allows COM port numbers to be specified. */
     serial_device_prefix = "/dev/tty[ASU]*";
 #elif defined IRIX
     serial_device_prefix = "/dev/ttyd*";
-#endif /* __linux__ */
+#endif
 
     if(argc > 0) {
       if (argv->a_type == A_FLOAT)
