@@ -758,7 +758,7 @@ static int set_baudrate(t_comport *x, int ibaud)
     long            baud = ibaud;
     long        baudbits = get_baud_ratebits(x, &baud);
 
-    comport_verbose("[comport] set_baudrate: Setting baud rate to %g with baudbits 0x%X", baud, baudbits);
+    comport_verbose("[comport] set_baudrate: Setting baud rate to %ld with baudbits 0x%X", baud, baudbits);
     if( cfsetispeed(tio, baudbits) != 0 )
         pd_error(x, "[comport]: ERROR failed to set bitrate: %ld", baudbits);
     if( cfsetospeed(tio, baudbits) != 0 )
