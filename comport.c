@@ -1404,6 +1404,7 @@ allows COM port numbers to be specified. */
     test.ctsrts = 0; /* default no hardware handshaking */
     test.xonxoff = 0; /* default no software handshaking */
     test.hupcl = 1; /* default hangup on close */
+    test.x_verbose = 0; /* disable verbose for the 'test' comport */
 
     /* don't try to open negative devices */
     if(com_num < 0) {
