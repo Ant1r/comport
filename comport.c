@@ -159,16 +159,8 @@ static long baudspeedbittable[] =
 #ifdef  IRIX
 #define OPENPARAMS (O_RDWR|O_NDELAY|O_NOCTTY)
 #define TIONREAD FIONREAD         /* re map the IOCTL function */
-#define BAUDRATE_230400 -1
-#define BAUDRATE_115200 -1
-#define BAUDRATE_57600  -1
-#define BAUDRATE_38400  B38400
 #else /* IRIX */
 #define OPENPARAMS (O_RDWR|O_NDELAY|O_NOCTTY)
-#define BAUDRATE_230400 B230400
-#define BAUDRATE_115200 B115200
-#define BAUDRATE_57600  B57600
-#define BAUDRATE_38400  B38400
 #endif /* else IRIX */
 
 typedef struct baudbits_ {
