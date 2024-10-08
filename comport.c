@@ -1715,15 +1715,26 @@ static void comport_enum(t_comport *x, t_bool to_console, int argc, t_atom *argv
 
 #ifdef _WIN32
     HANDLE          fd;
-    char            device_name[10];
+    char            device_name[10];        /* "\\.\COMxx" naming, for CreateFileA() */ 
+    char            simple_device_name[10]; /* "COMxx" naming, for QueryDosDeviceA() */
     DWORD           dw;
     for(i = 1; i < COMPORT_MAX; i++)
     {
 #ifdef _MSC_VER
         sprintf_s(device_name, 10, "%s%d", x->serial_device_prefix, i);
+        sprintf_s(simple_device_name, 10, "COM%d", i);
 #else
         sprintf(device_name, "%s%d", x->serial_device_prefix, i);
+        sprintf(simple_device_name, "COM%d", i);
 #endif
+        char lpTargetPath[5000]; /* buffer to store the path of the COMPORTS */
+        t_bool is_usb = 0;
+        DWORD test = QueryDosDeviceA(simple_device_name, lpTargetPath, 5000);
+        if(test == 0) continue; /* QueryDosDevice returns zero if it didn't find an object */
+        if(!strncmp("\\Device\\USBSER", lpTargetPath, 14))
+            is_usb = 1;
+        if(filter_usb && !is_usb) continue;
+
         fd = CreateFileA( device_name,
                 GENERIC_READ | GENERIC_WRITE,
                 0,
