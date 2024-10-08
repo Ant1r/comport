@@ -332,10 +332,10 @@ static void comport_output_rtscts(t_comport *x);
 static void comport_output_xonxoff(t_comport *x);
 static void comport_output_hupcl(t_comport *x);
 static void comport_output_rxerrors(t_comport *x);
-static void comport_enum(t_comport *x, t_bool to_console);
+static void comport_enum(t_comport *x, t_bool to_console, int argc, t_atom *argv);
 static void comport_info(t_comport *x);
-static void comport_devices(t_comport *x);
-static void comport_ports(t_comport *x);
+static void comport_devices(t_comport *x, t_symbol *s, int argc, t_atom *argv);
+static void comport_ports(t_comport *x, t_symbol *s, int argc, t_atom *argv);
 static void comport_set_verbose(t_comport *x, t_floatarg f);
 static void comport_help(t_comport *x);
 void comport_setup(void);
@@ -352,7 +352,6 @@ specify a COM port number greater than 9, use the following syntax:
 "\\\\.\\COM10".  This syntax works for all port numbers and hardware that
 allows COM port numbers to be specified. */
     static const char SERIAL_DEVICE_PREFIX[] = "\\\\.\\COM";
-    //static const char USB_DEVICE_PREFIX[] = "\\\\.\\COM";
 /* for UNIX, this is a glob pattern for matching devices  */
 #elif defined __APPLE__
     static const char SERIAL_DEVICE_PREFIX[] = "/dev/tty.*";
@@ -1700,10 +1699,20 @@ static void comport_print(t_comport *x, t_symbol *s, int argc, t_atom *argv)
     }
 }
 
-static void comport_enum(t_comport *x, t_bool to_console)
+static void comport_enum(t_comport *x, t_bool to_console, int argc, t_atom *argv)
 {
     unsigned int    i;
     t_atom          output_atom[2];
+    t_bool          filter_usb = 0;
+
+    int count;
+    t_symbol *sym_usb = gensym("usb");
+    for(count = 0; count < argc; count++)
+    {
+        if (argv[count].a_type == A_SYMBOL && (atom_getsymbol(&argv[count]) == sym_usb))
+            filter_usb = 1;
+    }
+
 #ifdef _WIN32
     HANDLE          fd;
     char            device_name[10];
@@ -1764,17 +1773,30 @@ static void comport_enum(t_comport *x, t_bool to_console)
     }
     for(i=0; i<glob_buffer.gl_pathc; i++)
     {
-/* now try to open the device */
-        if((fd = open(glob_buffer.gl_pathv[i], OPENPARAMS)) != INVALID_HANDLE_VALUE)
+        const char *device_name = glob_buffer.gl_pathv[i];
+    /* test the device against the filter */
+        if(filter_usb)
+        {
+#ifdef __APPLE__
+            if(strncmp(device_name, "/dev/tty.usb", 12)) continue;
+#elif defined __linux__
+            if( strncmp(device_name, "/dev/ttyACM", 11)
+                &&
+                strncmp(device_name, "/dev/ttyUSB", 11)
+            ) continue;
+#endif /* TODO: IRIX */
+        }
+    /* now try to open the device */
+        if((fd = open(device_name, OPENPARAMS)) != INVALID_HANDLE_VALUE)
         {
 /* now see if it has attributes */
             if ((tcgetattr(fd, &test)) != -1) {
                 if(to_console)
                 {
-                    post("\t%d\t%s", i, glob_buffer.gl_pathv[i]);// this one really exists
+                    post("\t%d\t%s", i, device_name);// this one really exists
                 } else {
                     SETFLOAT(&output_atom[0], i);
-                    SETSYMBOL(&output_atom[1], gensym(glob_buffer.gl_pathv[i]));
+                    SETSYMBOL(&output_atom[1], gensym(device_name));
                     outlet_anything( x->x_status_outlet, gensym("ports"), 2, output_atom);
                 }
             }
@@ -1784,9 +1806,9 @@ static void comport_enum(t_comport *x, t_bool to_console)
 #endif  /* _WIN32 */
 }
 
-static void comport_ports(t_comport *x)
+static void comport_ports(t_comport *x, t_symbol *s, int argc, t_atom *argv)
 {
-    comport_enum(x, 0);
+    comport_enum(x, 0, argc, argv);
 }
 
 static void comport_output_status(t_comport *x, t_symbol *selector, t_float output_value)
@@ -1864,10 +1886,10 @@ static void comport_output_open_status(t_comport *x)
         comport_output_status(x, gensym("open"), 1);
 }
 
-static void comport_devices(t_comport *x)
+static void comport_devices(t_comport *x, t_symbol *s, int argc, t_atom *argv)
 {
     post("[comport]: available serial ports:");
-    comport_enum(x, 1);
+    comport_enum(x, 1, argc, argv);
 }
 
 static void comport_info(t_comport *x)
@@ -1963,8 +1985,8 @@ void comport_setup(void)
     class_addmethod(comport_class, (t_method)comport_set_inprocess, gensym("inputprocess"), A_FLOAT, 0);
     class_addmethod(comport_class, (t_method)comport_help, gensym("help"), 0);
     class_addmethod(comport_class, (t_method)comport_info, gensym("info"), 0);
-    class_addmethod(comport_class, (t_method)comport_devices, gensym("devices"), 0);
-    class_addmethod(comport_class, (t_method)comport_ports, gensym("ports"), 0);
+    class_addmethod(comport_class, (t_method)comport_devices, gensym("devices"), A_GIMME, 0);
+    class_addmethod(comport_class, (t_method)comport_ports, gensym("ports"), A_GIMME, 0);
 
 #ifndef _WIN32
     null_tv.tv_sec = 0; /* no wait */
