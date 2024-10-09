@@ -14,5 +14,14 @@ USE: There should be a external comport.dll for windows, comport.pd_linux for li
 just copy it to the extra folder of your pd Installation or working directory. 
 Please see testcomport.pd for more help.
 
-If you have improvements or questions feel free to contact me under
+if you have improvements or questions feel free to contact me under
 ritsch _at_ iem.at
+
+if you want to compile the newest (bleeding edge, and possibly unstable) source
+code yourself, you can get a copy from the public git repository:
+   https://git.iem.at/pd/comport/
+
+there's also an issue tracker for reporting bugs and requesting new features
+available at:
+   https://git.iem.at/pd/comport/-/issues
+
