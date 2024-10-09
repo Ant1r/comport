@@ -965,34 +965,6 @@ static void check_lock(t_comport *x)
     }
 }
 
-#if 0
-t_bool check_file_availability(const char *device_name)
-{
-    FILE *fp;
-    int status;
-    char buffer[256];
-
-    snprintf(buffer, sizeof(buffer), "fuser %s", device_name);
-    fp = popen(buffer, "r");
-    if (fp == NULL) return 0;
-
-    /*while (fgets(buffer, sizeof(buffer), fp) != NULL)
-    {
-        //printf("%s", buffer);
-    }*/
-
-
-    status = pclose(fp);
-    if (status == -1) {
-        /* Error reported by pclose() */
-    } else {
-        /* Use macros described under wait() to inspect `status' in order
-           to determine success/failure of command executed by popen() */
-    }
-    return 1;
-}
-#endif
-
 static int open_serial(unsigned int com_num, t_comport *x)
 {
     int             fd;
