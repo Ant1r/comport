@@ -43,6 +43,7 @@ JZ 20210321 allow the user to specify a device pattern as creation argument
 #include <fcntl.h>
 #include <sys/ioctl.h> /* for ioctl DTR */
 #include <termios.h> /* for TERMIO ioctl calls */
+#include <sys/file.h> /* for flock() */
 #include <unistd.h>
 #include <glob.h>
 #define HANDLE int
@@ -74,6 +75,8 @@ typedef struct comport
     int             comhandle; /* holds the comport handle */
     struct termios  oldcom_termio; /* save the old com config */
     struct termios  com_termio; /* for the new com config */
+    t_bool          x_lock; /* the file descriptor has to be locked when opened */
+    t_bool          x_locked; /* the file descriptor has been locked */
 #endif
 
   /* device specifications */
@@ -933,6 +936,30 @@ static int set_break(t_comport *x, int on)
     return ((status < 0)? status: (on != 0));
 }
 
+static t_bool lock_fd(t_comport *x, int fd, int lock)
+{
+    int operation = (lock ? LOCK_EX : LOCK_UN) | LOCK_NB;
+    int ret;
+
+    if((lock == x->x_locked) || (fd == INVALID_HANDLE_VALUE)) return 1;
+    ret = flock(fd, operation);
+    if(ret == 0) {
+        x->x_locked = lock;
+    }
+    return (ret == 0);
+}
+
+static void check_lock(t_comport *x)
+{
+    if(x->x_lock) {
+        if(!lock_fd(x, x->comhandle, 1)) {
+            comport_verbose("[comport] file descriptor of %s is already locked, closing!\n",
+                x->serial_device->s_name);
+            comport_close(x);
+        }
+    }
+}
+
 static int open_serial(unsigned int com_num, t_comport *x)
 {
     int             fd;
@@ -1073,6 +1100,7 @@ static int close_serial(t_comport *x)
 
     if(fd != INVALID_HANDLE_VALUE)
     {
+        lock_fd(x, fd, 0);
         tcsetattr(fd, TCSANOW, tios);
         close(fd);
         comport_verbose("[comport] closed port %i (%s)", x->comport, x->serial_device->s_name);
@@ -1480,6 +1508,9 @@ static void *comport_new(t_symbol *s, int argc, t_atom *argv)
 
     x->x_verbose = 0;
     x->x_inprocess = 0;
+#ifndef _WIN32
+    x->x_lock = x->x_locked = 0;
+#endif
 
     return x;
 }
@@ -1654,6 +1685,13 @@ static void comport_close(t_comport *x)
     if (x->x_status_outlet != NULL) outlet_float(x->x_status_outlet, (float)x->comport);
 }
 
+static void comport_lock(t_comport *x, t_floatarg f)
+{
+#ifndef _WIN32
+    x->x_lock = (f != 0);
+#endif
+}
+
 static void comport_open(t_comport *x, t_floatarg f)
 {
     if(x->comhandle != INVALID_HANDLE_VALUE)
@@ -1662,6 +1700,9 @@ static void comport_open(t_comport *x, t_floatarg f)
     x->comhandle = open_serial(f,x);
 
     clock_delay(x->x_clock, x->x_deltime);
+#ifndef _WIN32
+    check_lock(x);
+#endif
 }
 
 /*
@@ -1677,6 +1718,9 @@ static void comport_devicename(t_comport *x, t_symbol *s)
 
     x->comhandle = open_serial(USE_DEVICENAME,x);
     clock_delay(x->x_clock, x->x_deltime);
+#ifndef _WIN32
+    check_lock(x);
+#endif
 }
 
 static void comport_print(t_comport *x, t_symbol *s, int argc, t_atom *argv)
@@ -1986,6 +2030,7 @@ void comport_setup(void)
     class_addmethod(comport_class, (t_method)comport_parity, gensym("parity"), A_FLOAT, 0);
     class_addmethod(comport_class, (t_method)comport_xonxoff, gensym("xonxoff"), A_FLOAT, 0);
     class_addmethod(comport_class, (t_method)comport_hupcl, gensym("hupcl"), A_FLOAT, 0);
+    class_addmethod(comport_class, (t_method)comport_lock, gensym("lock"), A_FLOAT, 0);
     class_addmethod(comport_class, (t_method)comport_close, gensym("close"), 0);
     class_addmethod(comport_class, (t_method)comport_open, gensym("open"), A_FLOAT, 0);
     class_addmethod(comport_class, (t_method)comport_devicename, gensym("devicename"), A_SYMBOL, 0);
