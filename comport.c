@@ -75,9 +75,9 @@ typedef struct comport
     int             comhandle; /* holds the comport handle */
     struct termios  oldcom_termio; /* save the old com config */
     struct termios  com_termio; /* for the new com config */
+#endif
     t_bool          x_lock; /* the file descriptor has to be locked when opened */
     t_bool          x_locked; /* the file descriptor has been locked */
-#endif
 
   /* device specifications */
     t_symbol        *serial_device;
@@ -746,6 +746,11 @@ int comport_get_cts(t_comport *x)
     return cts_state;
 }
 
+static void check_lock(t_comport *x)
+{
+	 /* on windows, this is a no-op */
+	(void)x;
+}
 #else /* NT */
 /* ----------------- POSIX - UNIX ------------------------------ */
 
@@ -1538,9 +1543,7 @@ static void *comport_new(t_symbol *s, int argc, t_atom *argv)
 
     x->x_verbose = 0;
     x->x_inprocess = 0;
-#ifndef _WIN32
     x->x_lock = x->x_locked = 0;
-#endif
 
     return x;
 }
@@ -1717,9 +1720,7 @@ static void comport_close(t_comport *x)
 
 static void comport_lock(t_comport *x, t_floatarg f)
 {
-#ifndef _WIN32
     x->x_lock = (f != 0);
-#endif
 }
 
 static void comport_open(t_comport *x, t_floatarg f)
@@ -1730,9 +1731,7 @@ static void comport_open(t_comport *x, t_floatarg f)
     x->comhandle = open_serial(f,x);
 
     clock_delay(x->x_clock, x->x_deltime);
-#ifndef _WIN32
     check_lock(x);
-#endif
 }
 
 /*
@@ -1748,9 +1747,7 @@ static void comport_devicename(t_comport *x, t_symbol *s)
 
     x->comhandle = open_serial(USE_DEVICENAME,x);
     clock_delay(x->x_clock, x->x_deltime);
-#ifndef _WIN32
     check_lock(x);
-#endif
 }
 
 static void comport_print(t_comport *x, t_symbol *s, int argc, t_atom *argv)
