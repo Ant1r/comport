@@ -26,6 +26,11 @@ JZ 20210321 cleanup t_comport struct
 JZ 20210321 use (int) instead of t_float for members where applicable
 JZ 20210321 allow the user to turn ON input processing (again)
 JZ 20210321 allow the user to specify a device pattern as creation argument
+
+JZ 20240926 extend valid baudrates
+JZ 20240926 negative port-numbers at creation time indicate not-to-open
+AR 20241008 allow to query only USB devices or ports
+AR 20241008 allow to lock the opened device (Linux / MacOS)
 */
 
 #include "m_pd.h"

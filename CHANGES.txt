@@ -1,3 +1,18 @@
+1.3 - 2024-10-10
+
+  * update pd-lib-builder
+
+  * extend valid baudrates
+
+  * negative port-numbers at creation time indicate not-to-open
+
+  * help patch update
+
+  * allow to query only USB devices or ports
+    (reduce risks of hanging when trying to open other types of device)
+
+  * allow to lock the opened device, to avoid conflicts with other comports
+
 1.2 - 2022-03-21
 
   * fix building with Pd>=0.52
